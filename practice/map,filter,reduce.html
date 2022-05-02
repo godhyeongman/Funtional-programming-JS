@@ -159,6 +159,27 @@
       );
 
       log("--- 함수 조합 pipe---");
+
+      const total_price = pipe(
+        curryMap((p) => p.price),
+        curryReduce((acc, curr) => acc + curr)
+      );
+
+      const base_total_price = (predi) => pipe(curryFilter(predi), total_price);
+
+      log(
+        curryGo(
+          products,
+          base_total_price((p) => p.price > 20000)
+        )
+      );
+
+      log(
+        curryGo(
+          products,
+          base_total_price((p) => p.price < 20000)
+        )
+      );
     </script>
   </body>
 </html>
