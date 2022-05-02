@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <script>
+      const log = console.log;
+
+      log("-----iter-------");
+
+      const iter = {
+        [Symbol.iterator]() {
+          return {
+            next() {
+              return { value, done };
+            },
+            [Symbol.iterator]() {
+              return this;
+            },
+          };
+        },
+      };
+
+      log("---map---");
+
+      const map = (f, iter) => {
+        if (!iter[Symbol.iterator]) {
+          return;
+        }
+
+        const res = [];
+
+        for (const value of iter) {
+          res.push(f(value));
+        }
+
+        return res;
+      };
+
+      log(map((value) => value + 1, 1));
+
+      log("---filter---");
+
+      const filter = (f, iter) => {
+        const res = [];
+
+        for (const value of iter) {
+          if (f(value)) {
+            res.push(value);
+          }
+        }
+
+        return res;
+      };
+
+      log("---reduce---");
+
+      const reduce = (f, iter, acc) => {
+        if (!acc && typeof acc != "number") {
+          iter = iter[Symbol.iterator]();
+          acc = iter.next().value;
+        }
+
+        for (const value of iter) {
+          acc = f(acc, value);
+        }
+        return acc;
+      };
+
+      //   log(reduce((acc, value) => acc + (value + 1), [1, 2, 3], 0));
+      //   log(reduce((acc, value) => acc + (value + 1), [1, 2, 3]));
+
+      //   log(
+      //     [1, 2, 3].reduce((acc, curr) => {
+      //       acc = acc + (curr + 1);
+      //       return acc;
+      //     })
+      //   );
+
+      log("--- go ---");
+
+      const go = (...args) => reduce((acc, currFunc) => currFunc(acc), args);
+      // ... args? -> Rest Parameter라는 문법으로 함수의 매개변수를 spread 문법으로 작성한 형태,
+      //사용시 함수의 인자 값을 모아서 배열로 집어넣음 장점: 깔끔한 함수 표현
+
+      //   const test = (...args) => log(args);
+      //   log(test(1, 2, 3));
+
+      log(
+        go(
+          0,
+          (a) => a + 1,
+          (a) => a + 10,
+          (a) => a + 100
+        )
+      );
+
+      log("--- pipe ---");
+
+      const pipe =
+        (f, ...funcs) =>
+        (...values) =>
+          go(f(...values), ...funcs);
+
+      const piped = pipe(
+        (a, b) => a + b,
+        (a) => a + 10,
+        (a) => a + 100
+      );
+
+      log(piped(0, 1));
+
+      log("--- curry ---");
+
+      const curry =
+        (f) =>
+        (arg, ...rest) =>
+          rest.length ? f(arg, ...rest) : (...oneMore) => f(arg, ...oneMore);
+
+      const mult = curry((a, b) => a * b);
+
+      log(mult(1)(2, 3));
+
+      log("--- go + curry ---");
+
+      const curryMap = curry(map);
+      const curryFilter = curry(filter);
+      const curryReduce = curry(reduce);
+      const curryGo = (...args) => curryReduce((value, f) => f(value), args);
+
+      const products = [
+        { name: "반팔티", price: 15000 },
+        { name: "긴팔티", price: 20000 },
+        { name: "핸드폰케이스", price: 15000 },
+        { name: "후드티", price: 30000 },
+        { name: "바지", price: 25000 },
+      ];
+
+      log(
+        curryGo(
+          products,
+          (products) => curryFilter((p) => p.price <= 20000)(products),
+          (products) => curryMap((p) => p.price)(products),
+          (prices) => curryReduce((acc, curr) => acc + curr)(prices)
+        )
+      );
+
+      log(
+        curryGo(
+          products,
+          curryFilter((p) => p.price < 20000),
+          curryMap((p) => p.price),
+          curryReduce((acc, curr) => acc + curr)
+        ) // 가능한 이유 커리로 인해 curry filter,map,reduce는 인자가 1개일 경우 함수를 리턴하게 변하였음 Go 함수는 인자들을 이용하여 함수를 순서대로 reduce 하며 실행하므로 코드가 정상 동작함
+      );
+
+      log("--- 함수 조합 pipe---");
+    </script>
+  </body>
+</html>
